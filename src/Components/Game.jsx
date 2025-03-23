@@ -3,12 +3,13 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
-  const [gameStarted, setGameStarted] = useState(false); // Game start state
+  const [gameStarted, setGameStarted] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [category, setCategory] = useState(null);
-  const [feedback, setFeedback] = useState(null); // Feedback state
+  const [numQuestions, setNumQuestions] = useState(5); // Default to 5 questions
+  const [feedback, setFeedback] = useState(null);
 
   const categories = [
     { id: 9, name: "General Knowledge" },
@@ -21,20 +22,20 @@ function App() {
     { id: 25, name: "Animals" },
     { id: 17, name: "Science: Nature" },
     { id: 12, name: "Music" },
+    { id: 14, name: "Entertainment: Video Games" },
   ];
 
-  // Fetch quiz questions when the game starts and category is selected
   useEffect(() => {
     if (gameStarted && category !== null) {
       const fetchQuestions = async () => {
         const response = await axios.get(
-          `https://opentdb.com/api.php?amount=5&category=${category}&difficulty=medium&type=multiple`
+          `https://opentdb.com/api.php?amount=${numQuestions}&category=${category}&difficulty=medium&type=multiple`
         );
         setQuestions(response.data.results);
       };
       fetchQuestions();
     }
-  }, [gameStarted, category]);
+  }, [gameStarted, category, numQuestions]);
 
   const handleCategorySelect = (categoryId) => {
     setCategory(categoryId);
@@ -56,19 +57,49 @@ function App() {
       });
     }
 
-    // Move to the next question after a short delay
+    // Delay for feedback, then move to the next question
     setTimeout(() => {
-      setFeedback(null); // Reset feedback
-      setCurrentQuestion(currentQuestion + 1);
+      setFeedback(null);
+      if (currentQuestion + 1 < questions.length) {
+        setCurrentQuestion(currentQuestion + 1);
+      } else {
+        // End the quiz and show score when all questions are answered
+        setGameStarted(false);
+      }
     }, 2000);
+  };
+
+  const handleRestartGame = () => {
+    // Reset game-related states to allow replaying the quiz
+    setGameStarted(false);
+    setCategory(null);
+    setScore(0);
+    setQuestions([]);
+    setCurrentQuestion(0);
+    setFeedback(null);
   };
 
   return (
     <div className="container d-flex align-items-center justify-content-center vh-100">
       {!gameStarted ? (
-        // Category Selection Screen
         <div className="text-center">
           <h1 className="mb-4">Choose a Quiz Category</h1>
+          <div className="row mb-3">
+            <label htmlFor="questionCount" className="form-label">
+              Number of Questions
+            </label>
+            <select
+              className="form-select"
+              id="questionCount"
+              value={numQuestions}
+              onChange={(e) => setNumQuestions(Number(e.target.value))}
+            >
+              <option value={5}>5 Questions</option>
+              <option value={10}>10 Questions</option>
+              <option value={15}>15 Questions</option>
+              <option value={20}>20 Questions</option>
+            </select>
+          </div>
           <div className="row">
             {categories.map((category) => (
               <div key={category.id} className="col-6 mb-3">
@@ -84,7 +115,6 @@ function App() {
           </div>
         </div>
       ) : (
-        // Quiz Game Screen
         <div
           className="card p-4 shadow-lg"
           style={{ width: "100%", maxWidth: "600px" }}
@@ -134,10 +164,7 @@ function App() {
                 <h2 className="mb-4">
                   Your final score is {score} / {questions.length}
                 </h2>
-                <button
-                  onClick={() => setGameStarted(false)}
-                  className="btn btn-primary"
-                >
+                <button onClick={handleRestartGame} className="btn btn-primary">
                   Go Back to Category Selection
                 </button>
               </div>
